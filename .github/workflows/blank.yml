@@ -35,7 +35,7 @@ jobs:
 
       - name: Run essay generator
         run: |
-          python synthetic_generator.py 5 --num-essays 32
+          python gen-data.py 5 --num-essays 32
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
