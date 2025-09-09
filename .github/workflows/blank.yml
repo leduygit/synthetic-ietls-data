@@ -3,7 +3,7 @@ name: IELTS Essay Generator Pipeline
 on:
   push:
     paths:
-      - "README.md"   # Trigger only when README.md changes
+      - "readme.md"   # Trigger only when README.md changes
 
 jobs:
   pipeline:
