@@ -6,6 +6,25 @@ on:
       - "readme.md"   # Trigger only when README.md changes
 
 jobs:
+  generate:                # <- new job
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      KAGGLE_JSON: ${{ secrets.KAGGLE_JSON }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Verify env
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY is not set!"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY is available"
+          fi
+
+      - name: Run script
+        run: python synthetic_generator.py
   pipeline:
     runs-on: ubuntu-latest
 
@@ -82,3 +101,5 @@ jobs:
           kaggle kernels push -p ./notebook_meta
           echo "Starting notebook run..."
           kaggle kernels run blueinthe/train
+
+  
