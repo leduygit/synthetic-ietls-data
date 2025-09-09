@@ -112,9 +112,9 @@ dmypy.json
 cython_debug/
 
 # Generated data files
-generated_essays_*.csv
-synthetic_data_*.csv
-band_*.csv
+# generated_essays_*.csv
+# synthetic_data_*.csv
+# band_*.csv
 
 # IDE
 .vscode/
