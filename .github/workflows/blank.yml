@@ -26,7 +26,7 @@ jobs:
       - name: Check README value
         id: readme
         run: |
-          value=$(tail -n 1 README.md)
+          value=$(tail -n 1 readme.md)
           echo "lastval=$value" >> $GITHUB_ENV
           if [ "$value" -eq 5 ]; then
             echo "Value is 5, stopping workflow."
