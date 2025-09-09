@@ -260,6 +260,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # update readme.md value
+    readme_path = 'README.md'
+    with open(readme_path, 'r') as file:
+        lines = file.readlines()
+        last_number = int(lines[-1].strip())
+
+    # Only update if last_number < 5
+    if last_number < 5:
+        lines[-1] = f"{last_number + 1}\n"
+        with open(readme_path, 'w') as file:
+            file.writelines(lines)
+
 
 
 
