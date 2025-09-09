@@ -1,0 +1,73 @@
+name: IELTS Essay Generator Pipeline
+
+on:
+  push:
+    paths:
+      - "README.md"   # Trigger only when README.md changes
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt kaggle
+
+      - name: Check README value
+        id: readme
+        run: |
+          value=$(tail -n 1 README.md)
+          echo "lastval=$value" >> $GITHUB_ENV
+          if [ "$value" -eq 5 ]; then
+            echo "Value is 5, stopping workflow."
+            exit 0
+          fi
+
+      - name: Run essay generator
+        run: |
+          python synthetic_generator.py 5 --num-essays 32
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Configure Kaggle API
+        run: |
+          mkdir -p ~/.kaggle
+          echo "${{ secrets.KAGGLE_JSON }}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      # 🔽 Pull dataset metadata from Kaggle
+      - name: Pull Kaggle dataset metadata
+        run: kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
+
+      # 🔽 Add generated CSV to training/ folder in dataset
+      - name: Upload generated CSV to Kaggle dataset (inside training/)
+        run: |
+          latest_csv=$(ls -t band_5_*.csv | head -n 1)
+          echo "Found CSV: $latest_csv"
+
+          mkdir -p ./dataset_meta/training
+          cp "$latest_csv" ./dataset_meta/training/
+
+          kaggle datasets version -p ./dataset_meta -m "Update dataset with $latest_csv" -r zip
+
+      # 🔽 Pull notebook metadata from Kaggle
+      - name: Pull Kaggle notebook metadata
+        run: kaggle kernels pull blueinthe/train --metadata -p ./notebook_meta
+
+      # 🔽 Push and run Kaggle Notebook
+      - name: Push & Run Kaggle Notebook
+        run: |
+          cp train.ipynb ./notebook_meta/
+          kaggle kernels push -p ./notebook_meta
+          echo "Starting notebook run..."
+          kaggle kernels run blueinthe/train
