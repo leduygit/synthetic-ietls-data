@@ -125,27 +125,31 @@ jobs:
 
           kaggle datasets version -p ./dataset_meta -m "Update dataset with $latest_csv" -r zip
 
-      # 🔽 Pull notebook metadata
+      # 🔽 Pull notebook metadata (only metadata, not code file)
       - name: Pull Kaggle notebook metadata
         run: kaggle kernels pull blueinthe/train --metadata -p ./notebook_meta
 
-      # 🔽 Ensure notebook metadata has correct ID and code_file
-      - name: Patch kernel-metadata.json with ID
+      # 🔽 Copy the updated notebook into metadata folder
+      - name: Copy notebook into metadata folder
+        run: cp train.ipynb ./notebook_meta/train.ipynb
+
+      # 🔽 Ensure kernel-metadata.json has correct ID and code_file
+      - name: Patch kernel-metadata.json with ID and notebook file
         run: |
           jq '.id = "blueinthe/train" | .code_file = "train.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
           echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
+      # 🔽 Debug (optional)
       - name: Debug kernel metadata
         run: |
           cat ./notebook_meta/kernel-metadata.json
           jq '.code_file' ./notebook_meta/kernel-metadata.json
 
-
-      # 🔽 Push & run notebook
+      # 🔽 Push & Run Kaggle Notebook
       - name: Push & Run Kaggle Notebook
         run: |
-          cp train.ipynb ./notebook_meta/
           kaggle kernels push -p ./notebook_meta
-          echo "Starting notebook run..."
+          echo "🚀 Starting notebook run..."
           kaggle kernels run blueinthe/train
+
