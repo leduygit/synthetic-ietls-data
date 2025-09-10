@@ -59,11 +59,16 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+
+      # 🔽 Configure Kaggle API using username & key
       - name: Configure Kaggle API
         run: |
           mkdir -p ~/.kaggle
-          echo "${{ secrets.KAGGLE_JSON }}" > ~/.kaggle/kaggle.json
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
       # 🔽 Pull dataset metadata from Kaggle
       - name: Pull Kaggle dataset metadata
@@ -91,5 +96,4 @@ jobs:
           kaggle kernels push -p ./notebook_meta
           echo "Starting notebook run..."
           kaggle kernels run blueinthe/train
-
   
