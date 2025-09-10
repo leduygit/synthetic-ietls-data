@@ -136,6 +136,12 @@ jobs:
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
           echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
+      - name: Debug kernel metadata
+        run: |
+          cat ./notebook_meta/kernel-metadata.json
+          jq '.code_file' ./notebook_meta/kernel-metadata.json
+
+
       # 🔽 Push & run notebook
       - name: Push & Run Kaggle Notebook
         run: |
