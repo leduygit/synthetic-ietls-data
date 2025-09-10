@@ -111,7 +111,7 @@ jobs:
       # 🔽 Patch dataset metadata with correct ID
       - name: Patch dataset-metadata.json with ID
         run: |
-          jq '.id = "thanhnghia123/mielband-ielts-data-train"' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
+          cat ./dataset_meta/dataset-metadata.json | jq -r '.' | jq '.id = "thanhnghia123/mielband-ielts-data-train"' > ./dataset_meta/tmp.json
           mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
           echo "✅ Patched dataset-metadata.json with ID"
 
