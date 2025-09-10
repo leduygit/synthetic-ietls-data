@@ -3,15 +3,35 @@ name: IELTS Essay Generator Pipeline
 on:
   push:
     paths:
-      - "README.md"   # Trigger only when README.md changes
+      - "readme.md"   # Trigger only when README.md changes
 
 jobs:
+  generate:                # <- new job
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      KAGGLE_JSON: ${{ secrets.KAGGLE_JSON }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Verify env
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY is not set!"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY is available"
+          fi
+
+      - name: Run script
+        run: python synthetic_generator.py
   pipeline:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,27 +43,72 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt kaggle
 
+      - name: Update CA certificates
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates
+
+      - name: Debug OpenAI API with curl
+        run: |
+          curl -v https://api.openai.com/v1/models \
+            -H "Authorization: Bearer $OPENAI_API_KEY"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+
+
       - name: Check README value
         id: readme
         run: |
-          value=$(tail -n 1 README.md)
+          value=$(tail -n 1 readme.md)
           echo "lastval=$value" >> $GITHUB_ENV
           if [ "$value" -eq 5 ]; then
             echo "Value is 5, stopping workflow."
             exit 0
           fi
 
-      - name: Run essay generator
+      - name: Run with IPv4 only
         run: |
-          python synthetic_generator.py 5 --num-essays 32
+          python - <<'EOF'
+          import os, socket
+          import requests.packages.urllib3.util.connection as urllib3_cn
+      
+          # Force requests/OpenAI to use IPv4 sockets
+          def allowed_gai_family():
+              return socket.AF_INET
+          urllib3_cn.allowed_gai_family = allowed_gai_family
+      
+          from openai import OpenAI
+          client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+      
+          try:
+              resp = client.chat.completions.create(
+                  model="gpt-4o-mini",
+                  messages=[{"role": "user", "content": "Hello from IPv4-only run"}],
+                  max_tokens=10
+              )
+              print("✅ Success:", resp.choices[0].message.content)
+          except Exception as e:
+              print("❌ Failed:", e)
+          EOF
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+
+      - name: Run essay generator
+        run: |
+          python gen-data.py 5 --num-essays 32
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+
+      # 🔽 Configure Kaggle API using username & key
       - name: Configure Kaggle API
         run: |
           mkdir -p ~/.kaggle
-          echo "${{ secrets.KAGGLE_JSON }}" > ~/.kaggle/kaggle.json
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
       # 🔽 Pull dataset metadata from Kaggle
       - name: Pull Kaggle dataset metadata
@@ -52,7 +117,7 @@ jobs:
       # 🔽 Add generated CSV to training/ folder in dataset
       - name: Upload generated CSV to Kaggle dataset (inside training/)
         run: |
-          latest_csv=$(ls -t band_5_*.csv | head -n 1)
+          latest_csv=$(ls -t band_*.csv | head -n 1)
           echo "Found CSV: $latest_csv"
 
           mkdir -p ./dataset_meta/training
@@ -71,3 +136,4 @@ jobs:
           kaggle kernels push -p ./notebook_meta
           echo "Starting notebook run..."
           kaggle kernels run blueinthe/train
+  
