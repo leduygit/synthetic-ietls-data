@@ -145,13 +145,15 @@ jobs:
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
           echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
-      # 🔽 Move notebook into metadata folder
+      # 🔽 Move notebook into metadata folder (so code_file matches)
       - name: Move notebook into metadata folder
-        run: mv ./notebook_meta/code/train.ipynb ./notebook_meta/train.ipynb
+        run: |
+          mv ./notebook_meta/code/train.ipynb ./notebook_meta/train.ipynb
 
       # 🔽 Push Kaggle Notebook
       - name: Push Kaggle Notebook
         run: kaggle kernels push -p ./notebook_meta
+
 
 
 
