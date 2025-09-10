@@ -200,10 +200,12 @@ def generate_essay(prompt: str, api_key: str, band: int) -> str:
             temperature=0.7
         )
         return response.choices[0].message.content.strip()
+    import traceback
     try:
         return retry_openai_call(call, max_retries=3, delay=2.0)
     except Exception as e:
         print(f"Error generating essay after retries: {e}")
+        traceback.print_exc()
         return None
 
 def main():
