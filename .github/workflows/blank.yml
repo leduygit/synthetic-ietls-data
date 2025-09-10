@@ -43,6 +43,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt kaggle
 
+      - name: Update CA certificates
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates
+
+      - name: Debug OpenAI API with curl
+        run: |
+          curl -v https://api.openai.com/v1/models \
+            -H "Authorization: Bearer $OPENAI_API_KEY"
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+
+
       - name: Check README value
         id: readme
         run: |
