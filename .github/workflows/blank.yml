@@ -106,12 +106,13 @@ jobs:
       - name: Pull Kaggle dataset metadata
         run: kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
 
-      # 🔽 Ensure dataset metadata has ID
+
       - name: Patch dataset-metadata.json with ID
         run: |
-          jq '.id = "thanhnghia123/mielband-ielts-data-train"' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
+          cat ./dataset_meta/dataset-metadata.json | jq -r '.' | jq '.id = "thanhnghia123/mielband-ielts-data-train"' > ./dataset_meta/tmp.json
           mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
           echo "✅ Patched dataset-metadata.json with ID"
+
 
       # 🔽 Add generated CSV & push dataset
       - name: Upload generated CSV to Kaggle dataset (inside training/)
