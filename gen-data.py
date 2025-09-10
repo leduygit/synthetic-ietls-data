@@ -253,13 +253,13 @@ def main():
         if essay:
             generated_essays.append({
                 'Question': random_question,
-                'Answer': essay,
+                'Essay': essay,
                 'Overall': args.band
             })
             
             print(f"\n--- Generated Essay {i+1} ---")
             print(f"Question: {random_question}")
-            print(f"Answer: {essay}")
+            print(f"Essay: {essay}")
             print(f"Overall: {args.band}")
             print("-" * 50)
         else:
