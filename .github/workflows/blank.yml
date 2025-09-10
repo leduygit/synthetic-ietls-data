@@ -6,7 +6,7 @@ on:
       - "readme.md" # Trigger only when README.md changes
 
 jobs:
-  generate: # <- new job
+  generate:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -66,7 +66,6 @@ jobs:
           import os, socket
           import requests.packages.urllib3.util.connection as urllib3_cn
 
-          # Force requests/OpenAI to use IPv4 sockets
           def allowed_gai_family():
               return socket.AF_INET
           urllib3_cn.allowed_gai_family = allowed_gai_family
@@ -93,7 +92,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      # 🔽 Configure Kaggle API using username & key
+      # 🔽 Configure Kaggle API
       - name: Configure Kaggle API
         run: |
           mkdir -p ~/.kaggle
@@ -103,11 +102,18 @@ jobs:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
-      # 🔽 Pull dataset metadata from Kaggle
+      # 🔽 Pull dataset metadata
       - name: Pull Kaggle dataset metadata
         run: kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
 
-      # 🔽 Add generated CSV to training/ folder in dataset
+      # 🔽 Add "id" to metadata.json
+      - name: Patch dataset-metadata.json with ID
+        run: |
+          jq '. + {id: "thanhnghia123/mielband-ielts-data-train"}' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
+          mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
+          echo "✅ Patched dataset-metadata.json with ID"
+
+      # 🔽 Add generated CSV & push dataset
       - name: Upload generated CSV to Kaggle dataset (inside training/)
         run: |
           latest_csv=$(ls -t band_*.csv | head -n 1)
@@ -118,11 +124,19 @@ jobs:
 
           kaggle datasets version -p ./dataset_meta -m "Update dataset with $latest_csv" -r zip
 
-      # 🔽 Pull notebook metadata from Kaggle
+      # 🔽 Pull notebook metadata
       - name: Pull Kaggle notebook metadata
         run: kaggle kernels pull blueinthe/train --metadata -p ./notebook_meta
 
-      # 🔽 Push and run Kaggle Notebook
+      # 🔽 Add "id" to kernel-metadata.json
+      - name: Patch kernel-metadata.json with ID
+        run: |
+          jq '. + {id: "blueinthe/train"}' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
+          echo "✅ Patched kernel-metadata.json with ID"
+
+
+      # 🔽 Push & run notebook
       - name: Push & Run Kaggle Notebook
         run: |
           cp train.ipynb ./notebook_meta/
