@@ -130,14 +130,13 @@ jobs:
           kaggle datasets version -p ./dataset_meta -m "Update dataset with new file" -r zip
 
 
-        # 🔽 Pull notebook code (.ipynb)
+      # 🔽 Pull notebook code (.ipynb)
       - name: Pull Kaggle notebook code
         run: kaggle kernels pull blueinthe/train -p ./notebook_meta/code
 
       # 🔽 Pull notebook metadata (kernel-metadata.json)
       - name: Pull Kaggle notebook metadata
         run: kaggle kernels pull blueinthe/train --metadata -p ./notebook_meta
-
 
       # 🔽 Ensure kernel-metadata.json has correct ID and code_file
       - name: Patch kernel-metadata.json with ID and notebook file
@@ -150,13 +149,10 @@ jobs:
       - name: Move notebook into metadata folder
         run: mv ./notebook_meta/code/train.ipynb ./notebook_meta/train.ipynb
 
+      # 🔽 Push Kaggle Notebook
+      - name: Push Kaggle Notebook
+        run: kaggle kernels push -p ./notebook_meta
 
-      # 🔽 Push & Run Kaggle Notebook
-      - name: Push & Run Kaggle Notebook
-        run: |
-          kaggle kernels push -p ./notebook_meta
-          echo "🚀 Starting notebook run..."
-          kaggle kernels run blueinthe/train
 
 
 
