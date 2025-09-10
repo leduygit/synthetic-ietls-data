@@ -102,28 +102,33 @@ jobs:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
-      # 🔽 Pull dataset metadata
-      - name: Pull Kaggle dataset metadata
-        run: kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
+       # 🔽 Pull dataset metadata + files
+      - name: Pull Kaggle dataset (metadata + files)
+        run: |
+          kaggle datasets download -d thanhnghia123/mielband-ielts-data-train -p ./dataset_meta --unzip
+          kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
 
-
+      # 🔽 Patch dataset metadata with correct ID
       - name: Patch dataset-metadata.json with ID
         run: |
-          cat ./dataset_meta/dataset-metadata.json | jq -r '.' | jq '.id = "thanhnghia123/mielband-ielts-data-train"' > ./dataset_meta/tmp.json
+          jq '.id = "thanhnghia123/mielband-ielts-data-train"' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
           mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
           echo "✅ Patched dataset-metadata.json with ID"
 
-
-      # 🔽 Add generated CSV & push dataset
-      - name: Upload generated CSV to Kaggle dataset (inside training/)
+      # 🔽 Add generated CSV into existing training/ folder
+      - name: Add new CSV into dataset folder
         run: |
           latest_csv=$(ls -t band_*.csv | head -n 1)
-          echo "Found CSV: $latest_csv"
+          echo "📂 Found CSV: $latest_csv"
 
           mkdir -p ./dataset_meta/training
           cp "$latest_csv" ./dataset_meta/training/
 
-          kaggle datasets version -p ./dataset_meta -m "Update dataset with $latest_csv" -r zip
+      # 🔽 Push updated dataset with all files (old + new)
+      - name: Push dataset to Kaggle
+        run: |
+          kaggle datasets version -p ./dataset_meta -m "Update dataset with new file" -r zip
+
 
       # 🔽 Pull notebook metadata (only metadata, not code file)
       - name: Pull Kaggle notebook metadata
