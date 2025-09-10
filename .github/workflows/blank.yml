@@ -65,6 +65,34 @@ jobs:
             exit 0
           fi
 
+      - name: Run with IPv4 only
+        run: |
+          python - <<'EOF'
+          import os, socket
+          import requests.packages.urllib3.util.connection as urllib3_cn
+      
+          # Force requests/OpenAI to use IPv4 sockets
+          def allowed_gai_family():
+              return socket.AF_INET
+          urllib3_cn.allowed_gai_family = allowed_gai_family
+      
+          from openai import OpenAI
+          client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+      
+          try:
+              resp = client.chat.completions.create(
+                  model="gpt-4o-mini",
+                  messages=[{"role": "user", "content": "Hello from IPv4-only run"}],
+                  max_tokens=10
+              )
+              print("✅ Success:", resp.choices[0].message.content)
+          except Exception as e:
+              print("❌ Failed:", e)
+          EOF
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+
       - name: Run essay generator
         run: |
           python gen-data.py 5 --num-essays 32
