@@ -9,10 +9,22 @@ import pandas as pd
 import openai
 import random
 import sys
-from typing import List, Dict
+from typing import List, Dict, Callable, Any
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+import time
+def retry_openai_call(func: Callable, max_retries: int = 3, delay: float = 2.0, *args, **kwargs) -> Any:
+    """Retry a function call with delay if it raises an exception."""
+    for attempt in range(1, max_retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt == max_retries:
+                print(f"Failed after {max_retries} attempts: {e}")
+                raise
+            print(f"Attempt {attempt} failed: {e}. Retrying in {delay} seconds...")
+            time.sleep(delay)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -133,7 +145,7 @@ def inject_typos_and_errors(essay: str, api_key: str) -> str:
     """Pass essay through another round to add typos and grammar mistakes"""
     client = openai.OpenAI(api_key=api_key)
     
-    try:
+    def call():
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -154,8 +166,10 @@ def inject_typos_and_errors(essay: str, api_key: str) -> str:
             temperature=0.8
         )
         return response.choices[0].message.content.strip()
+    try:
+        return retry_openai_call(call, max_retries=3, delay=2.0)
     except Exception as e:
-        print(f"Error injecting typos: {e}")
+        print(f"Error injecting typos after retries: {e}")
         return essay
 
 
@@ -175,7 +189,7 @@ def generate_essay(prompt: str, api_key: str, band: int) -> str:
     
     max_tokens = token_limits.get(band, 650)  # Default fallback
     
-    try:
+    def call():
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -185,11 +199,11 @@ def generate_essay(prompt: str, api_key: str, band: int) -> str:
             max_tokens=max_tokens,
             temperature=0.7
         )
-        
         return response.choices[0].message.content.strip()
-    
+    try:
+        return retry_openai_call(call, max_retries=3, delay=2.0)
     except Exception as e:
-        print(f"Error generating essay: {e}")
+        print(f"Error generating essay after retries: {e}")
         return None
 
 def main():
