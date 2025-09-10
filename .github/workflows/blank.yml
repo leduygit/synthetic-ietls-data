@@ -106,10 +106,10 @@ jobs:
       - name: Pull Kaggle dataset metadata
         run: kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
 
-      # 🔽 Add "id" to metadata.json
+      # 🔽 Ensure dataset metadata has ID
       - name: Patch dataset-metadata.json with ID
         run: |
-          jq '. + {id: "thanhnghia123/mielband-ielts-data-train"}' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
+          jq '.id = "thanhnghia123/mielband-ielts-data-train"' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
           mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
           echo "✅ Patched dataset-metadata.json with ID"
 
@@ -128,13 +128,12 @@ jobs:
       - name: Pull Kaggle notebook metadata
         run: kaggle kernels pull blueinthe/train --metadata -p ./notebook_meta
 
-      # 🔽 Add "id" to kernel-metadata.json
+      # 🔽 Ensure notebook metadata has correct ID and code_file
       - name: Patch kernel-metadata.json with ID
         run: |
-          jq '. + {id: "blueinthe/train"}' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          jq '.id = "blueinthe/train" | .code_file = "train.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
-          echo "✅ Patched kernel-metadata.json with ID"
-
+          echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
       # 🔽 Push & run notebook
       - name: Push & Run Kaggle Notebook
