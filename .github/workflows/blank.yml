@@ -104,6 +104,8 @@ jobs:
       - name: Run essay generator
         run: |
           python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 
       # 🔽 Configure Kaggle API
