@@ -153,7 +153,7 @@ jobs:
       # 🔽 Ensure kernel-metadata.json has correct ID and code_file
       - name: Patch kernel-metadata.json with ID and notebook file
         run: |
-          jq '.id = "redinthe/train-with-mlflow-dagshub" | .code_file = "train.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          jq '.id = "redinthe/train-with-mlflow-dagshub" | .code_file = "train-with-mlflow-dagshub.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
           echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
