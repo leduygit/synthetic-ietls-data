@@ -148,12 +148,12 @@ jobs:
 
       # 🔽 Pull notebook code + metadata into one folder
       - name: Pull Kaggle notebook (code + metadata)
-        run: kaggle kernels pull blueinthe/train -p ./notebook_meta -m
+        run: kaggle kernels pull redinthe/train-with-mlflow-dagshub -p ./notebook_meta -m
 
       # 🔽 Ensure kernel-metadata.json has correct ID and code_file
       - name: Patch kernel-metadata.json with ID and notebook file
         run: |
-          jq '.id = "blueinthe/train" | .code_file = "train.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          jq '.id = "redinthe/train-with-mlflow-dagshub" | .code_file = "train.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
           echo "✅ Patched kernel-metadata.json with correct ID and code_file"
 
