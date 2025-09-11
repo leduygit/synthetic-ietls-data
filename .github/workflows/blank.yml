@@ -86,11 +86,25 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+      - name: Parse parameters from commit message
+        id: parse_params
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MESSAGE"
+      
+          BAND_SCORE=$(echo "$COMMIT_MESSAGE" | grep -oP 'band_score=\K\d+')
+          BATCH_SIZE=$(echo "$COMMIT_MESSAGE" | grep -oP 'batch_size=\K\d+')
+          NUM_ESSAYS=$(echo "$COMMIT_MESSAGE" | grep -oP 'num_essays=\K\d+')
+          
+          echo "BAND_SCORE=$BAND_SCORE" >> $GITHUB_ENV
+          echo "BATCH_SIZE=$BATCH_SIZE" >> $GITHUB_ENV
+          echo "NUM_ESSAYS=$NUM_ESSAYS" >> $GITHUB_ENV
+
+
       - name: Run essay generator
         run: |
-          python gen-data.py 5 --num-essays 1
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS
+
 
       # 🔽 Configure Kaggle API
       - name: Configure Kaggle API
