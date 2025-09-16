@@ -14,6 +14,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 import time
+import json
 def retry_openai_call(func: Callable, max_retries: int = 3, delay: float = 2.0, *args, **kwargs) -> Any:
     """Retry a function call with delay if it raises an exception."""
     for attempt in range(1, max_retries + 1):
@@ -28,7 +29,8 @@ def retry_openai_call(func: Callable, max_retries: int = 3, delay: float = 2.0, 
 
 # Load environment variables from .env file
 load_dotenv()
-
+# Set OpenAI API key
+openai.api_key = os.getenv('OPENAI_API_KEY')
 def load_data():
     """Load the fewshot data and questions"""
     try:
@@ -140,34 +142,29 @@ Question: {target_question}
 Essay:"""
     
     return prompt
-
-def inject_typos_and_errors(essay: str, api_key: str) -> str:
+def call(system_content, user_content, max_tokens=400, temperature=0.7):
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content}
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature
+    )
+    return response.choices[0].message.content.strip()
+def inject_typos_and_errors(essay: str) -> str:
     """Pass essay through another round to add typos and grammar mistakes"""
-    client = openai.OpenAI(api_key=api_key)
-    
-    def call():
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are editing IELTS essays to simulate Band 5 writing. "
-                        "Rewrite the essay with more grammar mistakes, spelling errors, missing articles, awkward phrasing, and typos. "
-                        "Do not explain, do not add notes, do not include anything else—only return the rewritten essay text."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": f"Rewrite this essay with more Band 5 level errors:\n\n{essay}"
-                }
-            ],
-            max_tokens=400,
-            temperature=0.8
-        )
-        return response.choices[0].message.content.strip()
+    openai.api_key = os.getenv('OPENAI_API_KEY')
+    system_content = (
+        "You are editing IELTS essays to simulate Band 5 writing. "
+        "Rewrite the essay with more grammar mistakes, spelling errors, missing articles, awkward phrasing, and typos. "
+        "Do not explain, do not add notes, do not include anything else—only return the rewritten essay text."
+    )
+    user_content = f"Rewrite this essay with more Band 5 level errors:\n\n{essay}"
+
     try:
-        return retry_openai_call(call, max_retries=3, delay=2.0)
+        return retry_openai_call(call, max_retries=3, delay=2.0, system_content=system_content, user_content=user_content, max_tokens=400)
     except Exception as e:
         print(f"Error injecting typos after retries: {e}")
         return essay
@@ -176,7 +173,7 @@ def inject_typos_and_errors(essay: str, api_key: str) -> str:
 
 def generate_essay(prompt: str, api_key: str, band: int) -> str:
     """Generate essay using GPT-4o-mini with dynamic token allocation"""
-    client = openai.OpenAI(api_key=api_key)
+    # No need to initialize client here since we're using the call function
     
     # Dynamic token allocation based on band score
     token_limits = {
@@ -188,25 +185,38 @@ def generate_essay(prompt: str, api_key: str, band: int) -> str:
     }
     
     max_tokens = token_limits.get(band, 650)  # Default fallback
-    
-    def call():
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are simulating an IELTS test taker. Write essays that match the EXACT quality level of the examples provided. Include grammar errors, simple vocabulary, and basic sentence structures. Do NOT write perfect essays - match the authentic student writing level shown in the examples."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=max_tokens,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
+    system_content = "You are simulating an IELTS test taker. Write essays that match the EXACT quality level of the examples provided. Include grammar errors, simple vocabulary, and basic sentence structures. Do NOT write perfect essays - match the authentic student writing level shown in the examples."
+    user_content = prompt
     import traceback
     try:
-        return retry_openai_call(call, max_retries=3, delay=2.0)
+        return retry_openai_call(call, max_retries=3, delay=2.0, system_content=system_content, user_content=user_content, max_tokens=max_tokens)
     except Exception as e:
         print(f"Error generating essay after retries: {e}")
         traceback.print_exc()
         return None
+def inject_band_description(band: int, raw_solution: str) -> str:
+    """Inject band description into the essay"""
+    with open('band_descriptions.json', 'r') as json_file:
+        description = json.load(json_file)
+    band_desc = description.get(str(band), "")
+    print(f"band description: {band_desc}")
+    system_content = (
+        "You are an expert IELTS examiner. "
+        "Rewrite the provided essay to include the following band description characteristics. "
+        "Do not change the original meaning or ideas, just adjust the writing style and quality to match the band description. "
+        "Return only the rewritten essay text without any explanations or notes."
+    )
+    new_solution = raw_solution
+    import traceback
+    for k,v in band_desc.items():
+        user_content = f"Here is student's essay: {new_solution}. Rewrite this student essay following this instruction: \n{v}"
+        try:
+            print(f"Injecting {k} information ...")
+            new_solution = retry_openai_call(call, max_retries=3, delay=2.0, system_content=system_content, user_content=user_content, max_tokens=400)
+        except Exception as e:
+            print(f"Error generating essay after retries: {e}")
+            traceback.print_exc()
+    return new_solution
 
 def main():
     parser = argparse.ArgumentParser(description='Generate synthetic IELTS essays using GPT-4o-mini')
@@ -248,8 +258,8 @@ def main():
         essay = generate_essay(prompt, api_key, args.band)
 
         if essay and args.band == 5:
-            essay = inject_typos_and_errors(essay, api_key)
-        
+            essay = inject_typos_and_errors(essay)
+        essay = inject_band_description(args.band, raw_solution=essay)
         if essay:
             generated_essays.append({
                 'Question': random_question,
