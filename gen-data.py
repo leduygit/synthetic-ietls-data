@@ -208,32 +208,6 @@ IMPORTANT: Write in PLAIN TEXT only. Do NOT use any markdown formatting, bold te
         return None
 
 
-# def inject_band_description(band: int, essay: str) -> str:
-#     """Inject band description characteristics into the essay."""
-#     band_descriptions = load_band_descriptions()
-#     band_desc = band_descriptions.get(str(band), "")
-#     print(f"Injecting band {band} characteristics...")
-    
-#     system_content = (
-#         "You are an expert IELTS examiner. "
-#         "Rewrite the provided essay to include the following band description characteristics. "
-#         "Do not change the original meaning or ideas, just adjust the writing style and quality to match the band description. "
-#         "Return only the rewritten essay text without any explanations or notes."
-#     )
-    
-#     new_essay = essay
-#     for criterion, description in band_desc.items():
-#         user_content = f"Here is student's essay: {new_essay}. Rewrite this student essay following this instruction: \n{description}"
-#         try:
-#             print(f"Injecting {criterion} characteristics...")
-#             new_essay = retry_openai_call(call_openai, max_retries=3, delay=2.0, 
-#                                         system_content=system_content, user_content=user_content, max_tokens=400)
-#         except Exception as e:
-#             print(f"Error injecting {criterion} characteristics: {e}")
-    
-#     return new_essay
-
-
 # SCORING AND FEEDBACK
 
 def score_essay(essay: str, question: str) -> Dict[str, float]:
@@ -450,7 +424,7 @@ Please rewrite this essay to address the feedback and reach Band {target_band} l
         
         # Check if target reached
         if abs(current_overall - target_band) <= 0.5:
-            print(f"🎉 Target band {target_band} reached in iteration {iteration + 1}!")
+            print(f"Target band {target_band} reached in iteration {iteration + 1}!")
             break
         
         current_essay = essay
@@ -459,45 +433,103 @@ Please rewrite this essay to address the feedback and reach Band {target_band} l
     
     return iterations
 
-
 # FILE OUTPUT
+
+def save_combined_results(all_results: List[Dict], args: argparse.Namespace) -> None:
+    """Save combined results from all bands to a single CSV file."""
+    timestamp = datetime.now().strftime("%d-%m-%y-%H-%M")
+    
+    # Create band range string for filename
+    min_band = min(args.bands)
+    max_band = max(args.bands)
+    if len(args.bands) == 1:
+        band_str = str(args.bands[0])
+    elif len(args.bands) == max_band - min_band + 1 and all(b in args.bands for b in range(min_band, max_band + 1)):
+        # Consecutive range
+        band_str = f"{min_band}-{max_band}"
+    else:
+        # Non-consecutive, list all
+        band_str = "-".join(map(str, sorted(args.bands)))
+    
+    # Save simple format with just final essays from all bands
+    final_essays = []
+    for essay_num in range(1, args.num_essays + 1):
+        essay_iterations = [r for r in all_results if r['essay_number'] == essay_num]
+        if essay_iterations:
+            final_iteration = essay_iterations[-1]
+            final_essays.append({
+                'Question': final_iteration['question'],
+                'Essay': final_iteration['essay'], 
+                'Overall': final_iteration.get('target_band', final_iteration['scores'].get('overall', 'N/A'))  # Use target band
+            })
+    
+    if final_essays:
+        final_df = pd.DataFrame(final_essays)
+        combined_filename = f'band_{band_str}_{timestamp}.csv'
+        final_df.to_csv(combined_filename, index=False)
+        print(f"\nSaved {len(final_essays)} essays from bands {', '.join(map(str, args.bands))} to {combined_filename}")
+    
+    # Print summary statistics for combined results
+    print_combined_summary_statistics(all_results, args)
+
+
+def print_combined_summary_statistics(all_results: List[Dict], args: argparse.Namespace) -> None:
+    """Print summary statistics for combined results from all bands."""
+    print(f"\nCOMBINED SUMMARY RESULTS:")
+    print(f"Target bands: {', '.join(map(str, args.bands))}")
+    print(f"Total essays processed: {args.num_essays}")
+    
+    # Group results by target band
+    band_results = {}
+    for band in args.bands:
+        band_results[band] = []
+        
+    # Calculate final scores for each essay and group by target band
+    for essay_num in range(1, args.num_essays + 1):
+        essay_iterations = [r for r in all_results if r['essay_number'] == essay_num]
+        if essay_iterations:
+            final_iteration = essay_iterations[-1]
+            target_band = final_iteration.get('target_band')
+            final_score = final_iteration['scores'].get('overall', 0)
+            if target_band and target_band in band_results:
+                band_results[target_band].append({
+                    'essay_num': essay_num,
+                    'final_score': final_score,
+                    'target_reached': final_score >= target_band
+                })
+    
+    # Print statistics for each band
+    total_success = 0
+    total_essays = 0
+    
+    for band in sorted(args.bands):
+        essays = band_results[band]
+        if essays:
+            success_count = sum(1 for e in essays if e['target_reached'])
+            avg_score = sum(e['final_score'] for e in essays) / len(essays)
+            print(f"\nBand {band} Results:")
+            print(f"  Essays: {len(essays)}")
+            print(f"  Success rate: {success_count}/{len(essays)} ({success_count/len(essays)*100:.1f}%)")
+            print(f"  Average final score: {avg_score:.1f}")
+            
+            total_success += success_count
+            total_essays += len(essays)
+    
+    if total_essays > 0:
+        overall_success_rate = total_success / total_essays * 100
+        print(f"\nOVERALL SUCCESS RATE: {total_success}/{total_essays} ({overall_success_rate:.1f}%)")
+
+
 
 def save_results(all_results: List[Dict], args: argparse.Namespace) -> None:
     """Save both detailed and simple format results to CSV files."""
     timestamp = datetime.now().strftime("%d-%m-%y-%H-%M")
-    
-    # Save detailed iterations
-    # save_detailed_results(all_results, args, timestamp)
-    
+
     # Save simple format with just final essays
     save_simple_results(all_results, args, timestamp)
     
     # Print summary statistics
     print_summary_statistics(all_results, args)
-
-
-# def save_detailed_results(all_results: List[Dict], args: argparse.Namespace, timestamp: str) -> None:
-#     """Save detailed iteration data to CSV."""
-#     iteration_data = []
-#     for iter_result in all_results:
-#         iteration_data.append({
-#             'essay_number': iter_result['essay_number'],
-#             'iteration': iter_result['iteration'],
-#             'question': iter_result['question'],
-#             'essay': iter_result['essay'],
-#             'task_achievement': iter_result['scores'].get('task_achievement', 'N/A'),
-#             'coherence_cohesion': iter_result['scores'].get('coherence_cohesion', 'N/A'),
-#             'lexical_resource': iter_result['scores'].get('lexical_resource', 'N/A'),
-#             'grammatical_range': iter_result['scores'].get('grammatical_range', 'N/A'),
-#             'overall': iter_result['scores'].get('overall', 'N/A'),
-#             'feedback': iter_result.get('feedback', ''),
-#             'target_reached': iter_result.get('target_reached', False)
-#         })
-    
-#     iterations_df = pd.DataFrame(iteration_data)
-#     iterations_filename = f'iterative_improvement_{args.num_essays}essays_to_band_{args.band}_{timestamp}.csv'
-#     iterations_df.to_csv(iterations_filename, index=False)
-#     print(f"\n📊 Saved {len(all_results)} total iterations from {args.num_essays} essays to {iterations_filename}")
 
 
 def save_simple_results(all_results: List[Dict], args: argparse.Namespace, timestamp: str) -> None:
@@ -544,10 +576,22 @@ def print_summary_statistics(all_results: List[Dict], args: argparse.Namespace) 
 
 # MAIN FUNCTION
 
+def parse_bands(band_string: str) -> List[int]:
+    """Parse comma-separated band values and validate them."""
+    try:
+        bands = [int(b.strip()) for b in band_string.split(',')]
+        for band in bands:
+            if band not in range(5, 10):
+                raise ValueError(f"Band {band} is not in valid range 5-9")
+        return bands
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"Invalid band specification: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description='Generate synthetic IELTS essays using GPT-4o-mini')
-    parser.add_argument('band', type=int, choices=range(5, 10), 
-                       help='Target band score (5-9)')
+    parser.add_argument('bands', type=parse_bands, 
+                       help='Target band score(s). Single band (e.g., 7) or comma-separated (e.g., 5,6,7)')
     parser.add_argument('--num-essays', type=int, default=1,
                        help='Number of essays to generate (default: 1)')
     parser.add_argument('--max-iterations', type=int, default=1,
@@ -565,39 +609,51 @@ def main():
     fewshot_df, questions_df = load_data()
     
     print(f"Running iterative improvement mode:")
-    print(f"- Target band: {args.band}")
-    print(f"- Number of essays: {args.num_essays}")
+    print(f"- Target bands: {', '.join(map(str, args.bands))}")
+    print(f"- Number of essays per band: {args.num_essays}")
     print(f"- Max iterations per essay: {args.max_iterations}")
     
-    all_results = []
+    # Collect all results from all bands
+    combined_results = []
+    essay_counter = 1
     
-    # Process each essay
-    for essay_num in range(args.num_essays):
-        print(f"\n{'='*60}")
-        print(f"PROCESSING ESSAY {essay_num + 1} of {args.num_essays}")
-        print(f"{'='*60}")
+    # Process each target band
+    for band in args.bands:
+        print(f"\n{'='*80}")
+        print(f"PROCESSING TARGET BAND {band}")
+        print(f"{'='*80}")
         
-        # Select random question
-        question = questions_df.sample(n=1).iloc[0]['question']
-        
-        # Run iterative improvement for this essay
-        iterations = improve_essay_iteratively(
-            question=question,
-            target_band=args.band,
-            max_iterations=args.max_iterations
-        )
-        
-        if iterations:
-            # Add essay number and question to each iteration
-            for iteration in iterations:
-                iteration['essay_number'] = essay_num + 1
-                iteration['question'] = question
+        for essay_num in range(args.num_essays):
+            print(f"\n{'='*60}")
+            print(f"PROCESSING ESSAY {essay_counter} (Band {band}, Essay {essay_num + 1}/{args.num_essays})")
+            print(f"{'='*60}")
             
-            all_results.extend(iterations)
+            question = questions_df.sample(n=1).iloc[0]['question']
+            
+            iterations = improve_essay_iteratively(
+                question=question,
+                target_band=band,
+                max_iterations=args.max_iterations
+            )
+            
+            if iterations:
+                for iteration in iterations:
+                    iteration['essay_number'] = essay_counter
+                    iteration['target_band'] = band  # Add target band info
+                    iteration['question'] = question
+                
+                combined_results.extend(iterations)
+            
+            essay_counter += 1
     
-    # Save results if any were generated
-    if all_results:
-        save_results(all_results, args)
+    # Save all results to a single file
+    if combined_results:
+        # Create combined args for filename
+        combined_args = argparse.Namespace()
+        combined_args.bands = args.bands
+        combined_args.num_essays = args.num_essays * len(args.bands)  # Total essays across all bands
+        combined_args.max_iterations = args.max_iterations
+        save_combined_results(combined_results, combined_args)
 
 
 if __name__ == "__main__":
