@@ -108,15 +108,40 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 
-      # 🔽 Configure Kaggle API
+
+      - name: Set Kaggle credentials by branch
+        run: |
+          echo "GITHUB_REF_NAME=$GITHUB_REF_NAME"
+          case "$GITHUB_REF_NAME" in
+            no_band_9)
+              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_NO_BAND_9 }}" >> $GITHUB_ENV
+              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_NO_BAND_9 }}" >> $GITHUB_ENV
+              ;;
+            random_band_9)
+              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_RANDOM_BAND_9 }}" >> $GITHUB_ENV
+              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_RANDOM_BAND_9 }}" >> $GITHUB_ENV
+              ;;
+            worst_band)
+              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_WORST_BAND }}" >> $GITHUB_ENV
+              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_WORST_BAND }}" >> $GITHUB_ENV
+              ;;
+            top_2)
+              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_TOP_2 }}" >> $GITHUB_ENV
+              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_TOP_2 }}" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "❌ Unknown branch: $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+    
+
+
       - name: Configure Kaggle API
         run: |
           mkdir -p ~/.kaggle
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
        # 🔽 Pull dataset metadata + files
       - name: Pull Kaggle dataset (metadata + files)
