@@ -12,6 +12,8 @@ from typing import Any, Callable, Dict, List
 import openai
 import pandas as pd
 from dotenv import load_dotenv
+from openai import OpenAI
+
 
 # Load environment variables and set API key
 load_dotenv()
@@ -33,9 +35,12 @@ def retry_openai_call(func: Callable, max_retries: int = 3, delay: float = 2.0, 
             time.sleep(delay)
 
 
+
+client = OpenAI()
+
 def call_openai(system_content: str, user_content: str, max_tokens: int = 400, temperature: float = 0.7) -> str:
     """Make OpenAI API call with retry logic."""
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system_content},
@@ -45,6 +50,7 @@ def call_openai(system_content: str, user_content: str, max_tokens: int = 400, t
         temperature=temperature
     )
     return response.choices[0].message.content.strip()
+
 
 
 # DATA LOADING AND PROCESSING
