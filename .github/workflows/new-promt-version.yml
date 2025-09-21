@@ -1,0 +1,49 @@
+name: Generate and Push Prompt Dataset
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "gen-data.py"
+
+jobs:
+  push-dataset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set Kaggle credentials
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"${{ secrets.KAGGLE_USERNAME }}\",\"key\":\"${{ secrets.KAGGLE_KEY }}\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      # ⬇️ Pull the existing Kaggle dataset into dataset_meta
+      - name: Pull Kaggle dataset (metadata + files)
+        run: |
+          kaggle datasets download -d thanhnghia123/mielband-ielts-data-train -p ./dataset_meta --unzip
+          kaggle datasets metadata thanhnghia123/mielband-ielts-data-train -p ./dataset_meta
+
+      # ⬇️ Add a new folder copied from original
+      - name: Add new prompt-version folder
+        run: |
+          timestamp=$(date +"%y-%m-%d-%H-%M")
+          new_folder="promt-version_${timestamp}"
+          echo "🆕 Creating folder: $new_folder"
+
+          cp -r ./dataset_meta/original_24-09-20-04-09 "./dataset_meta/${new_folder}"
+
+      # ⬇️ Patch metadata with correct ID
+      - name: Patch dataset-metadata.json
+        run: |
+          jq '.id = "thanhnghia123/mielband-ielts-data-train"' ./dataset_meta/dataset-metadata.json > ./dataset_meta/tmp.json
+          mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
+          echo "✅ Patched dataset-metadata.json with correct ID"
+
+      # ⬇️ Push updated dataset (with the new folder added)
+      - name: Push dataset to Kaggle
+        run: |
+          kaggle datasets version -p ./dataset_meta -m "Add new folder promt-version_${timestamp}" -r zip
