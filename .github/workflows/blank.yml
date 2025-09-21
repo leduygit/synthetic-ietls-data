@@ -91,23 +91,20 @@ jobs:
         run: |
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MESSAGE"
-      
+
           BAND_SCORE=$(echo "$COMMIT_MESSAGE" | grep -oP 'band_score=\K\d+')
           BATCH_SIZE=$(echo "$COMMIT_MESSAGE" | grep -oP 'batch_size=\K\d+')
           NUM_ESSAYS=$(echo "$COMMIT_MESSAGE" | grep -oP 'num_essays=\K\d+')
-          
+
           echo "BAND_SCORE=$BAND_SCORE" >> $GITHUB_ENV
           echo "BATCH_SIZE=$BATCH_SIZE" >> $GITHUB_ENV
           echo "NUM_ESSAYS=$NUM_ESSAYS" >> $GITHUB_ENV
-
 
       - name: Run essay generator
         run: |
           python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS --max-iterations 3
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-
 
       - name: Set Kaggle credentials by branch
         run: |
@@ -134,8 +131,6 @@ jobs:
               exit 1
               ;;
           esac
-    
-
 
       - name: Configure Kaggle API
         run: |
@@ -143,7 +138,7 @@ jobs:
           echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
           chmod 600 ~/.kaggle/kaggle.json
 
-       # 🔽 Pull dataset metadata + files
+            # 🔽 Pull dataset metadata + files
       - name: Pull Kaggle dataset (metadata + files)
         run: |
           kaggle datasets download -d thanhnghia123/mielband-ielts-data-train -p ./dataset_meta --unzip
@@ -156,40 +151,88 @@ jobs:
           mv ./dataset_meta/tmp.json ./dataset_meta/dataset-metadata.json
           echo "✅ Patched dataset-metadata.json with ID"
 
-      # 🔽 Add generated CSV into existing training/ folder
+      # 🔽 Add generated CSV into newest timestamped folder (across all experiments)
       - name: Add new CSV into dataset folder
         run: |
           latest_csv=$(ls -t band_*.csv | head -n 1)
           echo "📂 Found CSV: $latest_csv"
 
-          mkdir -p ./dataset_meta/training
-          cp "$latest_csv" ./dataset_meta/training/
+          newest_folder=$(ls -d ./dataset_meta/*/ | \
+            xargs -n1 basename | \
+            grep '_' | \
+            awk -F'_' '{print $2, $0}' | \
+            sort -k1 | \
+            tail -n 1 | \
+            cut -d' ' -f2)
+          
+          # Prepend the base path back
+          newest_folder="./dataset_meta/${newest_folder}"
+          
+          echo "🆕 Newest folder: $newest_folder"
+
+
+          case "$GITHUB_REF_NAME" in
+            no-band-9)
+              subdir="training_no_band_9"
+              ;;
+            random-band-9)
+              subdir="training_randomize_band9"
+              ;;
+            top-2)
+              subdir="training_top_2"
+              ;;
+            worst-band)
+              subdir="training_worst_band"
+              ;;
+            *)
+              subdir="training_default"
+              ;;
+          esac
+
+          # Create folder and copy CSV
+          mkdir -p "${newest_folder}/${subdir}"
+          cp "$latest_csv" "${newest_folder}/${subdir}/"
 
       # 🔽 Push updated dataset with all files (old + new)
       - name: Push dataset to Kaggle
         run: |
           kaggle datasets version -p ./dataset_meta -m "Update dataset with new file" -r zip
 
-
-      # 🔽 Pull notebook code + metadata into one folder
+      # 🔽 Pull Kaggle notebook (code + metadata)
       - name: Pull Kaggle notebook (code + metadata)
-        run: kaggle kernels pull redinthe/train-with-mlflow-dagshub -p ./notebook_meta -m
-
-      # 🔽 Ensure kernel-metadata.json has correct ID and code_file
-      - name: Patch kernel-metadata.json with ID and notebook file
         run: |
-          jq '.id = "redinthe/train-with-mlflow-dagshub" | .code_file = "train-with-mlflow-dagshub.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          case "$GITHUB_REF_NAME" in
+            no-band-9)
+              kernel_id="redinthe/no-band-9-data-aug"
+              notebook_file="no-band-9-data-aug.ipynb"
+              ;;
+            random-band-9)
+              kernel_id="redinthe/random-band-9-data-aug"
+              notebook_file="random-band-9-data-aug.ipynb"
+              ;;
+            top-2)
+              kernel_id="redinthe/top-2-data-aug"
+              notebook_file="top-2-data-aug.ipynb"
+              ;;
+            worst-band)
+              kernel_id="redinthe/worst-band-data-aug"
+              notebook_file="worst-band-data-aug.ipynb"
+              ;;
+            *)
+              echo "❌ Unknown branch $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
+          kaggle kernels pull "$kernel_id" -p ./notebook_meta -m
+
+          # Patch metadata with correct ID and notebook file
+          jq ".id = \"$kernel_id\" | .code_file = \"$notebook_file\"" ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
-          echo "✅ Patched kernel-metadata.json with correct ID and code_file"
+
+          echo "✅ Pulled $kernel_id and patched kernel-metadata.json"
+
 
       # 🔽 Push Kaggle Notebook
       - name: Push Kaggle Notebook
         run: kaggle kernels push -p ./notebook_meta
-
-
-
-
-
-
-
-
