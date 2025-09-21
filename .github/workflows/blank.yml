@@ -157,8 +157,10 @@ jobs:
           latest_csv=$(ls -t band_*.csv | head -n 1)
           echo "📂 Found CSV: $latest_csv"
 
-          # Find newest folder based only on timestamp part (yy-mm-dd-HH-MM)
+          # Find newest folder based only on timestamp part (yy-mm-dd-HH-MM),
+          # ignoring any folder without an underscore
           newest_folder=$(ls -d ./dataset_meta/*/ | \
+            grep '_' | \
             awk -F'_' '{print $2, $0}' | \
             sort -k1 | \
             tail -n 1 | \
@@ -166,26 +168,68 @@ jobs:
 
           echo "🆕 Newest folder: $newest_folder"
 
-          mkdir -p "${newest_folder}/training"
-          cp "$latest_csv" "${newest_folder}/training/"
 
-          echo "✅ Copied $latest_csv into ${newest_folder}/training/"
+          case "$GITHUB_REF_NAME" in
+            no-band-9)
+              subdir="training_no_band_9"
+              ;;
+            random-band-9)
+              subdir="training_randomize_band9"
+              ;;
+            top-2)
+              subdir="training_top_2"
+              ;;
+            worst-band)
+              subdir="training_worst_band"
+              ;;
+            *)
+              subdir="training_default"
+              ;;
+          esac
+
+          # Create folder and copy CSV
+          mkdir -p "${newest_folder}/${subdir}"
+          cp "$latest_csv" "${newest_folder}/${subdir}/"
 
       # 🔽 Push updated dataset with all files (old + new)
       - name: Push dataset to Kaggle
         run: |
           kaggle datasets version -p ./dataset_meta -m "Update dataset with new file" -r zip
 
-      # 🔽 Pull notebook code + metadata into one folder
+      # 🔽 Pull Kaggle notebook (code + metadata)
       - name: Pull Kaggle notebook (code + metadata)
-        run: kaggle kernels pull redinthe/no-band-9-data-aug -p ./notebook_meta -m
-
-      # 🔽 Ensure kernel-metadata.json has correct ID and code_file
-      - name: Patch kernel-metadata.json with ID and notebook file
         run: |
-          jq '.id = "redinthe/no-band-9-data-aug" | .code_file = "no-band-9-data-aug.ipynb"' ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
+          case "$GITHUB_REF_NAME" in
+            no_band_9)
+              kernel_id="redinthe/no-band-9-data-aug"
+              notebook_file="no-band-9-data-aug.ipynb"
+              ;;
+            random_band_9)
+              kernel_id="redinthe/random-band-9-data-aug"
+              notebook_file="random-band-9-data-aug.ipynb"
+              ;;
+            top_2)
+              kernel_id="redinthe/top-2-data-aug"
+              notebook_file="top-2-data-aug.ipynb"
+              ;;
+            worst_band)
+              kernel_id="redinthe/worst-band-data-aug"
+              notebook_file="worst-band-data-aug.ipynb"
+              ;;
+            *)
+              echo "❌ Unknown branch $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
+          kaggle kernels pull "$kernel_id" -p ./notebook_meta -m
+
+          # Patch metadata with correct ID and notebook file
+          jq ".id = \"$kernel_id\" | .code_file = \"$notebook_file\"" ./notebook_meta/kernel-metadata.json > ./notebook_meta/tmp.json
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
-          echo "✅ Patched kernel-metadata.json with correct ID and code_file"
+
+          echo "✅ Pulled $kernel_id and patched kernel-metadata.json"
+
 
       # 🔽 Push Kaggle Notebook
       - name: Push Kaggle Notebook
