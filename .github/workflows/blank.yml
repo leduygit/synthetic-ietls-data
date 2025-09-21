@@ -157,15 +157,17 @@ jobs:
           latest_csv=$(ls -t band_*.csv | head -n 1)
           echo "📂 Found CSV: $latest_csv"
 
-          # Find newest folder based only on timestamp part (yy-mm-dd-HH-MM),
-          # ignoring any folder without an underscore
           newest_folder=$(ls -d ./dataset_meta/*/ | \
+            xargs -n1 basename | \
             grep '_' | \
             awk -F'_' '{print $2, $0}' | \
             sort -k1 | \
             tail -n 1 | \
             cut -d' ' -f2)
-
+          
+          # Prepend the base path back
+          newest_folder="./dataset_meta/${newest_folder}"
+          
           echo "🆕 Newest folder: $newest_folder"
 
 
@@ -200,19 +202,19 @@ jobs:
       - name: Pull Kaggle notebook (code + metadata)
         run: |
           case "$GITHUB_REF_NAME" in
-            no_band_9)
+            no-band-9)
               kernel_id="redinthe/no-band-9-data-aug"
               notebook_file="no-band-9-data-aug.ipynb"
               ;;
-            random_band_9)
+            random-band-9)
               kernel_id="redinthe/random-band-9-data-aug"
               notebook_file="random-band-9-data-aug.ipynb"
               ;;
-            top_2)
+            top-2)
               kernel_id="redinthe/top-2-data-aug"
               notebook_file="top-2-data-aug.ipynb"
               ;;
-            worst_band)
+            worst-band)
               kernel_id="redinthe/worst-band-data-aug"
               notebook_file="worst-band-data-aug.ipynb"
               ;;
