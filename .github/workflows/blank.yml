@@ -103,7 +103,7 @@ jobs:
 
       - name: Run essay generator
         run: |
-          python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS
+          python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS --max-iterations 3
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
