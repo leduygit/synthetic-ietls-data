@@ -113,19 +113,19 @@ jobs:
         run: |
           echo "GITHUB_REF_NAME=$GITHUB_REF_NAME"
           case "$GITHUB_REF_NAME" in
-            no_band_9)
+            no-band-9)
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_NO_BAND_9 }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_NO_BAND_9 }}" >> $GITHUB_ENV
               ;;
-            random_band_9)
+            random-band-9)
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_RANDOM_BAND_9 }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_RANDOM_BAND_9 }}" >> $GITHUB_ENV
               ;;
-            worst_band)
+            worst-band)
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_WORST_BAND }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_WORST_BAND }}" >> $GITHUB_ENV
               ;;
-            top_2)
+            top-2)
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_TOP_2 }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_TOP_2 }}" >> $GITHUB_ENV
               ;;
