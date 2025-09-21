@@ -15,6 +15,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Install dependencies (Kaggle CLI)
+        run: |
+          python -m pip install --upgrade pip
+          pip install kaggle jq
+
       - name: Set Kaggle credentials
         run: |
           mkdir -p ~/.kaggle
@@ -46,4 +51,5 @@ jobs:
       # ⬇️ Push updated dataset (with the new folder added)
       - name: Push dataset to Kaggle
         run: |
+          timestamp=$(date +"%y-%m-%d-%H-%M")
           kaggle datasets version -p ./dataset_meta -m "Add new folder promt-version_${timestamp}" -r zip
