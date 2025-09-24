@@ -125,8 +125,8 @@ jobs:
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
               ;;
             top-2)
-              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_TOP_2 }}" >> $GITHUB_ENV
-              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_TOP_2 }}" >> $GITHUB_ENV
+              echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_RANDOM_BAND_9 }}" >> $GITHUB_ENV
+              echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_RANDOM_BAND_9 }}" >> $GITHUB_ENV
               ;;
             *)
               echo "❌ Unknown branch: $GITHUB_REF_NAME"
