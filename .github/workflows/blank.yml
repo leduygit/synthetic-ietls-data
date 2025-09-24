@@ -92,7 +92,7 @@ jobs:
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MESSAGE"
 
-          BAND_SCORE=$(echo "$COMMIT_MESSAGE" | grep -oP 'band_score=\K\d+')
+          BAND_SCORE=$(echo "$COMMIT_MESSAGE" | grep -oP 'band_score=\K[0-9,]+')
           BATCH_SIZE=$(echo "$COMMIT_MESSAGE" | grep -oP 'batch_size=\K\d+')
           NUM_ESSAYS=$(echo "$COMMIT_MESSAGE" | grep -oP 'num_essays=\K\d+')
 
@@ -102,9 +102,11 @@ jobs:
 
       - name: Run essay generator
         run: |
-          python gen-data.py $BAND_SCORE --num-essays $NUM_ESSAYS --max-iterations 3
+          echo "Generating essays for bands $BAND_SCORE"
+          python gen-data.py "$BAND_SCORE" --num-essays "$NUM_ESSAYS" --max-iterations 3
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
 
       - name: Set Kaggle credentials by branch
         run: |
