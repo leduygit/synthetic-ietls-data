@@ -213,7 +213,7 @@ jobs:
               notebook_file="random-band-9-data-aug.ipynb"
               ;;
             top-2)
-              kernel_id="redinthe/top-2-data-aug"
+              kernel_id="blueinthe/top-2-data-aug"
               notebook_file="top-2-data-aug.ipynb"
               ;;
             worst-band)
