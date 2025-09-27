@@ -41,7 +41,7 @@ client = OpenAI()
 def call_openai(system_content: str, user_content: str, max_tokens: int = 400, temperature: float = 0.7) -> str:
     """Make OpenAI API call with retry logic."""
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[
             {"role": "system", "content": system_content},
             {"role": "user", "content": user_content}
