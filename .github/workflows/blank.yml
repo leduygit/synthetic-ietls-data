@@ -120,7 +120,7 @@ jobs:
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME_RANDOM_BAND_9 }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY_RANDOM_BAND_9 }}" >> $GITHUB_ENV
               ;;
-            worst-band)
+            claude)
               echo "KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}" >> $GITHUB_ENV
               echo "KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}" >> $GITHUB_ENV
               ;;
@@ -183,7 +183,7 @@ jobs:
             top-2)
               subdir="training_top_2"
               ;;
-            worst-band)
+            claude)
               subdir="training_worst_band"
               ;;
             *)
@@ -216,7 +216,7 @@ jobs:
               kernel_id="redinthe/top-2-data-aug"
               notebook_file="top-2-data-aug.ipynb"
               ;;
-            worst-band)
+            claude)
               kernel_id="redinthe/worst-band-data-aug"
               notebook_file="worst-band-data-aug.ipynb"
               ;;
