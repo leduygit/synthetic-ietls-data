@@ -38,7 +38,7 @@ def retry_claude_call(func: Callable, max_retries: int = 3, delay: float = 2.0, 
             print(f"Attempt {attempt} failed: {e}. Retrying in {delay} seconds...")
             time.sleep(delay)
 
-def call_claude(system_content: str, user_content: str, max_tokens: int = 400, temperature: float = 0.7, model: str = "claude-3-haiku-20240307") -> str:
+def call_claude(system_content: str, user_content: str, max_tokens: int = 400, temperature: float = 0.7, model: str = "claude-sonnet-4-0") -> str:
     """Make Anthropic Claude API call with retry logic."""
     response = client.messages.create(
         model=model,

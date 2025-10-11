@@ -103,10 +103,10 @@ jobs:
       - name: Run essay generator
         run: |
           echo "Generating essays for bands $BAND_SCORE"
-          python gen-data.py "$BAND_SCORE" --num-essays "$NUM_ESSAYS" --max-iterations 3
+          python gen-data-claude.py "$BAND_SCORE" --num-essays "$NUM_ESSAYS" --max-iterations 3
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Set Kaggle credentials by branch
         run: |
@@ -166,10 +166,10 @@ jobs:
             sort -k1 | \
             tail -n 1 | \
             cut -d' ' -f2)
-          
+
           # Prepend the base path back
           newest_folder="./dataset_meta/${newest_folder}"
-          
+
           echo "🆕 Newest folder: $newest_folder"
 
 
@@ -233,7 +233,6 @@ jobs:
           mv ./notebook_meta/tmp.json ./notebook_meta/kernel-metadata.json
 
           echo "✅ Pulled $kernel_id and patched kernel-metadata.json"
-
 
       # 🔽 Push Kaggle Notebook
       - name: Push Kaggle Notebook
